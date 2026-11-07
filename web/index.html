@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B 모델 실험실</title>
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#fff; --ink:#1b2026; --muted:#667085; --line:#e4e7ec;
+  --accent:#2563eb; --accent-soft:#e8f0fe; --warn:#b54708; --warn-soft:#fff4e5;
+  --b:#2563eb; --mom:#d97706; --prior:#98a2b3; --good:#12805c; --bad:#c43d33;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#12151a; --panel:#1b2027; --ink:#e8ecf1; --muted:#9aa4b2; --line:#2b323c;
+  --accent:#6aa0ff; --accent-soft:#1d2a44; --warn:#f4b266; --warn-soft:#3a2d18;
+  --b:#6aa0ff; --mom:#f0a63c; --prior:#7b8594; --good:#4cc79d; --bad:#ff7d72;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 "Malgun Gothic","Apple SD Gothic Neo",system-ui,sans-serif}
+header{padding:14px 24px;border-bottom:1px solid var(--line);background:var(--panel);display:flex;gap:16px;align-items:baseline;flex-wrap:wrap}
+header h1{font-size:18px;margin:0}
+header .sub{color:var(--muted);font-size:13px}
+.layout{display:grid;grid-template-columns:340px 1fr;gap:0;min-height:calc(100vh - 54px)}
+aside{background:var(--panel);border-right:1px solid var(--line);padding:16px;overflow:auto;max-height:calc(100vh - 54px);position:sticky;top:0}
+main{padding:20px 24px;min-width:0}
+h2{font-size:13px;color:var(--muted);text-transform:none;margin:18px 0 8px;font-weight:600}
+h2:first-child{margin-top:0}
+.group{border:1px solid var(--line);border-radius:8px;margin-bottom:10px;overflow:hidden}
+.group.off{opacity:.62}
+.ghead{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);font-weight:600}
+.ghead label{flex:1;cursor:pointer}
+.ghead select{font-size:12px}
+.var{display:flex;align-items:center;gap:8px;padding:6px 10px;border-top:1px solid var(--line)}
+.var .nm{flex:1;cursor:pointer;border-bottom:1px dotted var(--muted)}
+.var .nm:hover{color:var(--accent)}
+.tag{font-size:11px;color:var(--muted);white-space:nowrap}
+.tag.gu{color:var(--good)}
+.field{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0}
+.field input[type=number],.field select{width:84px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
+.hint{color:var(--muted);font-size:12px;margin:2px 0 8px}
+button{font:inherit;cursor:pointer;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 12px}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;width:100%;padding:10px}
+button:disabled{opacity:.5;cursor:wait}
+.row2{display:flex;gap:8px;margin-top:8px}
+.row2 button{flex:1}
+nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px}
+nav.tabs button{border:none;border-bottom:2px solid transparent;border-radius:0;background:none;padding:8px 14px;color:var(--muted)}
+nav.tabs button.on{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:14px}
+.card h3{margin:0 0 8px;font-size:15px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:14px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.kpi .l{color:var(--muted);font-size:12px}
+.kpi .v{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.kpi .s{color:var(--muted);font-size:12px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.chip{background:var(--accent-soft);color:var(--accent);border-radius:99px;padding:2px 10px;font-size:12px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--muted);font-weight:600;font-size:12px}
+td.na{color:var(--muted)}
+.bar{display:inline-block;height:8px;border-radius:4px;vertical-align:middle;margin-right:6px}
+.interp .item{padding:10px 0;border-top:1px solid var(--line)}
+.interp .item:first-child{border-top:none;padding-top:0}
+.interp .t{font-weight:700;margin-bottom:2px}
+.interp .t.warn{color:var(--warn)}
+.note{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:8px 12px;font-size:13px;margin-bottom:12px}
+.empty{color:var(--muted);text-align:center;padding:60px 0}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:4px;flex-wrap:wrap}
+.legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:4px;border-radius:2px}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);max-width:640px;width:92vw;padding:20px}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+.kv{display:grid;grid-template-columns:90px 1fr;gap:4px 12px;margin:10px 0}
+.kv div:nth-child(odd){color:var(--muted)}
+.axis-card .vars{margin:6px 0 0;padding-left:18px}
+code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:12px}
+@media (max-width:860px){.layout{grid-template-columns:1fr}aside{position:static;max-height:none;border-right:none;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>B 모델 실험실</h1>
+  <span class="sub" id="sub">불러오는 중…</span>
+</header>
+<div class="layout">
+  <aside>
+    <h2>① 변수 선택 <span class="tag">(이름을 누르면 자료 설명)</span></h2>
+    <div id="groups"></div>
+
+    <h2>② 설정</h2>
+    <div class="field"><span>매수 기준 (기준금리 + %p)</span><input id="premium" type="number" step="0.5" value="3"></div>
+    <div class="field"><span>규제 강도 C (작을수록 강함)</span><input id="C" type="number" step="0.1" min="0.01" value="0.5"></div>
+    <div class="field"><span>모멘텀 추가 시차</span>
+      <select id="momlag"><option value="0">없음</option><option value="1">+1개월</option><option value="2">+2개월</option><option value="3">+3개월</option></select></div>
+    <div class="field"><span>모멘텀 기준선 함께 평가</span><input id="baseline" type="checkbox" checked></div>
+    <div class="field"><span>테스트 연도 포함 (최종 1회)</span><input id="includeTest" type="checkbox"></div>
+    <div class="hint" id="testHint">기본은 검증 연도(2013~2020)만 평가합니다.</div>
+
+    <button class="primary" id="run">모델 돌리기</button>
+    <div class="row2"><button id="reset">기본값으로</button></div>
+  </aside>
+
+  <main>
+    <nav class="tabs" id="tabs">
+      <button data-t="result" class="on">결과</button>
+      <button data-t="axes">사용 중인 축</button>
+      <button data-t="data">전체 자료</button>
+    </nav>
+    <section id="t-result"><div class="empty">왼쪽에서 변수를 고르고 <b>모델 돌리기</b>를 누르세요.</div></section>
+    <section id="t-axes" hidden></section>
+    <section id="t-data" hidden></section>
+  </main>
+</div>
+
+<dialog id="dlg"><div id="dlgBody"></div><div style="text-align:right;margin-top:12px"><button id="dlgClose">닫기</button></div></dialog>
+
+<script>
+const $ = (s, r=document) => r.querySelector(s);
+const h = (tag, attrs={}, ...kids) => {
+  const e = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)) {
+    if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v !== false && v != null) e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat()) if (c != null && c !== false) e.append(c.nodeType ? c : document.createTextNode(c));
+  return e;
+};
+const fmt = (v, d=2) => v == null ? '–' : v.toFixed(d);
+const COLORS = ['var(--b)', 'var(--mom)', 'var(--prior)'];
+
+let ST = null;            // /api/state
+let sel = {};             // {group: {vars:Set, pca:n}}
+let lastRun = null;
+
+async function api(path, body) {
+  const r = await fetch(path, body ? {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)} : undefined);
+  const j = await r.json();
+  if (!r.ok || j.error) throw new Error(j.error || '요청 실패');
+  return j;
+}
+
+function defaultSel() {
+  sel = {};
+  for (const g of ST.groups) {
+    const d = ST.default_spec[g.id];
+    sel[g.id] = {vars:new Set(d ? d.vars : []), pca:d ? d.pca : 0};
+  }
+}
+
+function varById(id) { for (const g of ST.groups) for (const v of g.vars) if (v.id === id) return v; }
+
+/* ---------- 왼쪽: 변수 선택 ---------- */
+function renderGroups() {
+  const box = $('#groups'); box.replaceChildren();
+  for (const g of ST.groups) {
+    const s = sel[g.id], n = s.vars.size, all = n === g.vars.length;
+    const cb = h('input', {type:'checkbox', onchange:e => {
+      s.vars = e.target.checked ? new Set(g.vars.map(v => v.id)) : new Set();
+      if (n <= 1) s.pca = 0; renderGroups(); renderAxes();
+    }});
+    cb.checked = all; cb.indeterminate = n > 0 && !all;
+    const pca = h('select', {title:'이 그룹의 변수를 PCA로 묶어 성분 몇 개로 줄일지', onchange:e => { s.pca = +e.target.value; renderAxes(); }, disabled:n < 2},
+      h('option', {value:0}, 'PCA 없음'), ...[1,2,3].filter(k => k < Math.max(n,2)).map(k => h('option', {value:k}, `PCA ${k}개`)));
+    pca.value = Math.min(s.pca, Math.max(n-1, 0)) || 0; if (+pca.value !== s.pca) s.pca = +pca.value;
+    const el = h('div', {class:'group' + (n ? '' : ' off')},
+      h('div', {class:'ghead'}, cb, h('label', {onclick:() => cb.click()}, g.label), pca),
+      ...g.vars.map(v => {
+        const c = h('input', {type:'checkbox', onchange:e => {
+          e.target.checked ? s.vars.add(v.id) : s.vars.delete(v.id);
+          if (s.vars.size < 2) s.pca = 0; renderGroups(); renderAxes();
+        }});
+        c.checked = s.vars.has(v.id);
+        return h('div', {class:'var'}, c, h('span', {class:'nm', onclick:() => showVar(v)}, v.label),
+          h('span', {class:'tag' + (v.scope === 'gu' ? ' gu' : '')}, (v.scope === 'gu' ? '구별 · ' : '서울 공통 · ') + (v.first_month || '?') + '~'));
+      }));
+    box.append(el);
+  }
+}
+
+function currentSpec() {
+  const spec = {};
+  for (const g of ST.groups) { const s = sel[g.id]; if (s.vars.size) spec[g.id] = {vars:[...s.vars], pca:s.pca}; }
+  return spec;
+}
+
+/* ---------- 변수 상세 팝업 ---------- */
+async function showVar(v) {
+  const body = $('#dlgBody');
+  body.replaceChildren(h('h3', {style:'margin:0 0 4px'}, v.label), h('div', {class:'hint'}, '불러오는 중…'));
+  $('#dlg').showModal();
+  let s = null;
+  try { s = await api(`/api/series?name=${v.id}&premium=${$('#premium').value}&mom_lag=${$('#momlag').value}`); } catch (e) {}
+  body.replaceChildren(
+    h('h3', {style:'margin:0 0 4px'}, v.label, ' ', h('code', {}, v.id)),
+    h('div', {}, v.desc),
+    h('div', {class:'kv'},
+      h('div', {}, '출처'), h('div', {}, v.source),
+      h('div', {}, '단위'), h('div', {}, v.unit),
+      h('div', {}, '범위'), h('div', {}, v.scope === 'gu' ? '구마다 다른 값 (25개 구)' : '서울 전체 공통 값 (25개 구가 같은 값)'),
+      h('div', {}, '값이 있는 기간'), h('div', {}, `${v.first_month || '?'} ~ (결측 ${(v.missing*100).toFixed(1)}%)`),
+      h('div', {}, '시차'), h('div', {}, `공표 시차 ${ST.settings.pub_lag}개월 적용 (t월 예측엔 t-1월 값까지만 사용)`)),
+    ...(s ? [lineChart(s.months, s.values), h('div', {class:'hint'}, s.note)] : []));
+}
+function lineChart(months, vals) {
+  const W = 600, H = 170, p = {l:46, r:10, t:8, b:22};
+  const mn = Math.min(...vals), mx = Math.max(...vals), sp = (mx - mn) || 1;
+  const x = i => p.l + i * (W - p.l - p.r) / (vals.length - 1), y = v => p.t + (1 - (v - mn) / sp) * (H - p.t - p.b);
+  const d = vals.map((v,i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1)).join('');
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.width = '100%';
+  const add = (t, a, txt) => { const e = document.createElementNS(ns, t); for (const k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; svg.append(e); };
+  add('path', {d, fill:'none', stroke:'var(--accent)', 'stroke-width':1.6});
+  for (const v of [mn, mx]) add('text', {x:p.l-6, y:y(v)+4, 'text-anchor':'end', 'font-size':11, fill:'var(--muted)'}, (Math.abs(v) >= 100 ? Math.round(v).toLocaleString() : v.toFixed(2)));
+  add('text', {x:p.l, y:H-5, 'font-size':11, fill:'var(--muted)'}, months[0]);
+  add('text', {x:W-p.r, y:H-5, 'text-anchor':'end', 'font-size':11, fill:'var(--muted)'}, months[months.length-1]);
+  return svg;
+}
+
+/* ---------- 탭: 사용 중인 축 ---------- */
+function renderAxes() {
+  const root = $('#t-axes'); root.replaceChildren();
+  const spec = currentSpec(), used = Object.keys(spec);
+  const all = used.flatMap(g => spec[g].vars.map(varById));
+  const lateV = all.filter(v => v.first_month).sort((a,b) => a.first_month < b.first_month ? 1 : -1)[0];
+  root.append(h('div', {class:'card'},
+    h('h3', {}, '지금 선택한 구성'),
+    h('div', {}, `축 ${used.length}개 · 변수 ${all.length}개`),
+    lateV ? h('div', {class:'hint'}, `학습이 가능한 가장 이른 시점은 ${lateV.first_month} 이후입니다 (가장 늦게 생기는 변수: ${lateV.label}). 변수를 추가할수록 이 시점이 늦어질 수 있습니다.`) : null,
+    h('div', {class:'hint'}, `정답: ${ST.settings.horizon}개월 뒤 수익률 ≥ 기준금리 + ${$('#premium').value}%p 이면 1 (매수). 서울 ${ST.label.n_gu}개 구 × 월.`)));
+  for (const g of ST.groups) {
+    const s = sel[g.id], on = s.vars.size > 0;
+    root.append(h('div', {class:'card axis-card', style: on ? '' : 'opacity:.55'},
+      h('h3', {}, g.label, ' ', h('span', {class:'chip'}, on ? '사용 중' : '꺼짐'), ' ',
+        on && s.pca ? h('span', {class:'chip'}, `PCA ${s.pca}개 성분으로 압축`) : null),
+      h('ul', {class:'vars'}, ...g.vars.map(v => h('li', {style: s.vars.has(v.id) ? '' : 'color:var(--muted);text-decoration:line-through'},
+        h('b', {}, v.label), ` — ${v.source}, ${v.first_month || '?'}부터, ${v.scope === 'gu' ? '구별' : '서울 공통'} `,
+        h('a', {href:'#', onclick:e => { e.preventDefault(); showVar(v); }}, '설명 보기'))))));
+  }
+}
+
+/* ---------- 탭: 전체 자료 ---------- */
+function renderData() {
+  const root = $('#t-data'); root.replaceChildren();
+  root.append(h('div', {class:'card'}, h('h3', {}, '정답 y (맞혀야 하는 것)'),
+    h('div', {}, `서울 ${ST.label.n_gu}개 구의 ${ST.settings.horizon}개월 뒤 수익률이 기준금리 + 프리미엄 이상이면 1, 아니면 0.`),
+    h('div', {class:'hint'}, `라벨이 있는 기간 ${ST.label.first} ~ ${ST.label.last}, ${ST.label.rows.toLocaleString()}행, 매수(1) 비율 ${(ST.label.buy_rate*100).toFixed(1)}% (프리미엄 ${ST.settings.premium}%p 기준). 2026년 데이터는 제외했습니다.`)));
+  for (const d of ST.datasets) {
+    root.append(h('div', {class:'card'}, h('h3', {}, d.name),
+      h('div', {class:'kv'}, h('div', {}, '파일'), h('div', {}, h('code', {}, 'data/seed/' + d.file)),
+        h('div', {}, '출처'), h('div', {}, d.source), h('div', {}, '기간'), h('div', {}, d.period),
+        h('div', {}, '행 수'), h('div', {}, d.rows.toLocaleString()), h('div', {}, '쓰이는 곳'), h('div', {}, d.use),
+        h('div', {}, '열'), h('div', {}, d.columns.join(', ')))));
+  }
+  root.append(h('div', {class:'card'}, h('h3', {}, '사용하지 않는 것'),
+    h('div', {}, '규제지역·정책 대책, 재건축 잠재력, 정권 구분은 B 모델에서 의도적으로 뺐습니다. 거래량도 사용하지 않습니다(금리·공급의 결과값이라 축 효과를 가져가기 때문).')));
+}
+
+/* ---------- 결과 ---------- */
+function chart(models, years) {
+  const W = 720, H = 280, p = {l:44, r:16, t:12, b:30};
+  const x = i => p.l + (years.length === 1 ? (W-p.l-p.r)/2 : i * (W - p.l - p.r) / (years.length - 1)), y = v => p.t + (1 - v) * (H - p.t - p.b);
+  const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.style.width = '100%';
+  const add = (t, a, txt) => { const e = document.createElementNS(ns, t); for (const k in a) e.setAttribute(k, a[k]); if (txt != null) e.textContent = txt; svg.append(e); return e; };
+  for (const g of [0, .25, .5, .75, 1]) {
+    add('line', {x1:p.l, x2:W-p.r, y1:y(g), y2:y(g), stroke:'var(--line)', 'stroke-dasharray': g === .5 ? '5 4' : ''});
+    add('text', {x:p.l-6, y:y(g)+4, 'text-anchor':'end', 'font-size':11, fill:'var(--muted)'}, g.toFixed(2));
+  }
+  add('text', {x:W-p.r, y:y(.5)-4, 'text-anchor':'end', 'font-size':11, fill:'var(--muted)'}, '0.5 = 무작위');
+  years.forEach((yr,i) => add('text', {x:x(i), y:H-8, 'text-anchor':'middle', 'font-size':11, fill:'var(--muted)'}, yr));
+  Object.entries(models).forEach(([name, m], k) => {
+    let d = '', pen = false; const col = COLORS[k] || 'var(--prior)';
+    years.forEach((yr,i) => { const v = m.auc[yr]; if (v == null) { pen = false; return; } d += (pen ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1); pen = true; });
+    add('path', {d, fill:'none', stroke:col, 'stroke-width': k === 0 ? 2.4 : 1.6, 'stroke-dasharray': k === 2 ? '4 4' : ''});
+    years.forEach((yr,i) => { const v = m.auc[yr]; if (v != null) { const c = add('circle', {cx:x(i), cy:y(v), r: k === 0 ? 4 : 3, fill:col}); const t = document.createElementNS(ns, 'title'); t.textContent = `${name} ${yr}: ${v.toFixed(3)}`; c.append(t); } });
+  });
+  return svg;
+}
+
+function renderResult(r) {
+  const root = $('#t-result'); root.replaceChildren();
+  const names = Object.keys(r.models), B = r.models[names[0]];
+  const s = r.settings, nv = Object.values(r.spec).reduce((a,x) => a + x.vars.length, 0);
+  root.append(h('div', {class:'chips'},
+    h('span', {class:'chip'}, `평가 연도 ${r.years[0]}~${r.years[r.years.length-1]}${s.include_test ? ' (테스트 포함)' : ' (검증)'}`),
+    h('span', {class:'chip'}, `축 ${Object.keys(r.spec).length}개 · 변수 ${nv}개`),
+    ...Object.entries(r.spec).map(([g,x]) => h('span', {class:'chip'}, `${ST.groups.find(q => q.id === g).label}${x.pca ? ` · PCA${x.pca}` : ''}`)),
+    h('span', {class:'chip'}, `매수 기준 +${s.premium}%p`), h('span', {class:'chip'}, `C=${s.C}`)));
+  if (s.include_test) root.append(h('div', {class:'note'}, '테스트 연도가 포함된 결과입니다. 이 결과를 보고 설정을 바꾸지 마세요.'));
+
+  root.append(h('div', {class:'kpis'}, ...names.map((n,k) => {
+    const m = r.models[n];
+    return h('div', {class:'kpi'}, h('div', {class:'l'}, n), h('div', {class:'v', style:`color:${COLORS[k]}`}, fmt(m.mean)),
+      h('div', {class:'s'}, `AUC 평균 · 최저 ${fmt(m.min)} · 최고 ${fmt(m.max)}`));
+  })));
+
+  root.append(h('div', {class:'card'}, h('h3', {}, '연도별 AUC'), chart(r.models, r.years),
+    h('div', {class:'legend'}, ...names.map((n,k) => h('span', {}, h('i', {style:`background:${COLORS[k]}`}), n)))));
+
+  // 연도 표
+  const folds = r.folds;
+  root.append(h('div', {class:'card'}, h('h3', {}, '연도별 상세'),
+    h('table', {},
+      h('thead', {}, h('tr', {}, h('th', {}, '연도'), ...names.map(n => h('th', {}, n.replace('기준선: ', ''))), h('th', {}, '학습 행'), h('th', {}, '평가 행'), h('th', {}, '그해 매수(1) 비율'))),
+      h('tbody', {}, ...r.years.map(y => {
+        const f = folds.find(q => q.year === y);
+        return h('tr', {}, h('td', {}, y), ...names.map(n => { const v = r.models[n].auc[y]; return h('td', {class: v == null ? 'na' : '', style: v != null && v < .5 ? 'color:var(--bad)' : ''}, fmt(v)); }),
+          h('td', {}, f.n_train.toLocaleString()), h('td', {}, f.n_test.toLocaleString()), h('td', {}, f.buy_rate == null ? '–' : (f.buy_rate*100).toFixed(0) + '%'));
+      }))),
+    ...folds.filter(f => f.note).map(f => h('div', {class:'hint'}, `${f.year}년 계산 못 함: ${f.note}`))));
+
+  // 계수
+  if (r.info.fit) {
+    const mx = Math.max(...r.info.fit.map(f => Math.abs(f.coef)), .01);
+    root.append(h('div', {class:'card'}, h('h3', {}, `변수 영향 (${r.info.fit_year}년 평가에 쓴 마지막 학습 결과)`),
+      h('table', {}, h('thead', {}, h('tr', {}, h('th', {}, '변수 / 성분'), h('th', {}, '표준화 계수'), h('th', {}, '비고'))),
+        h('tbody', {}, ...r.info.fit.map(f => {
+          const v = varById(f.name), pos = f.coef > 0;
+          return h('tr', {}, h('td', {}, v ? v.label : f.name),
+            h('td', {}, h('span', {class:'bar', style:`width:${Math.abs(f.coef)/mx*80}px;background:${pos ? 'var(--good)' : 'var(--bad)'}`}), (pos ? '+' : '') + f.coef.toFixed(3)),
+            h('td', {style:'text-align:left;color:var(--muted);font-size:12px'}, f.pca ? `설명 ${(f.explained*100).toFixed(0)}% · ` + Object.entries(f.loadings).map(([k,w]) => `${(varById(k)||{label:k}).label} ${w >= 0 ? '+' : ''}${w.toFixed(2)}`).join(', ') : ''));
+        }))),
+      h('div', {class:'hint'}, '양(+)이면 값이 클수록 매수(1) 확률이 올라가고, 음(−)이면 내려갑니다. PCA 성분은 오른쪽 적재값 조합의 방향입니다.')));
+  }
+
+  // 해석 (결과 아래)
+  root.append(h('div', {class:'card interp'}, h('h3', {}, '결과 해석'),
+    ...r.interpretation.map(([t, body]) => h('div', {class:'item'}, h('div', {class:'t' + (t.startsWith('한계') || t === '사용상 주의' ? ' warn' : '')}, t), h('div', {}, body)))));
+}
+
+/* ---------- 실행 ---------- */
+async function runModel() {
+  const btn = $('#run'); btn.disabled = true; btn.textContent = '돌리는 중…';
+  if ($('#includeTest').checked && !confirm('테스트 연도(2021~2024)를 포함합니다. 최종 평가로 1회만 쓰는 것이 원칙입니다. 계속할까요?')) { btn.disabled = false; btn.textContent = '모델 돌리기'; return; }
+  try {
+    const r = await api('/api/run', {spec:currentSpec(), premium:+$('#premium').value, C:+$('#C').value, mom_lag:+$('#momlag').value,
+      include_test:$('#includeTest').checked, baseline:$('#baseline').checked});
+    lastRun = r; renderResult(r); switchTab('result');
+  } catch (e) { $('#t-result').replaceChildren(h('div', {class:'note'}, e.message)); switchTab('result'); }
+  btn.disabled = false; btn.textContent = '모델 돌리기';
+}
+
+function switchTab(t) {
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  for (const k of ['result','axes','data']) $('#t-' + k).hidden = k !== t;
+}
+
+async function init() {
+  ST = await api('/api/state');
+  $('#sub').textContent = `서울 ${ST.label.n_gu}개 구 · ${ST.settings.horizon}개월 뒤 수익률 ≥ 기준금리 + 프리미엄 · 1년씩 늘려가는 walk-forward`;
+  defaultSel(); renderGroups(); renderAxes(); renderData();
+  $('#premium').value = ST.settings.premium; $('#C').value = ST.settings.C; $('#momlag').value = ST.settings.mom_lag;
+  $('#testHint').textContent = `기본은 검증 연도(${ST.settings.valid_years[0]}~${ST.settings.valid_years.at(-1)})만 평가합니다. 테스트 연도(${ST.settings.test_years[0]}~${ST.settings.test_years.at(-1)})는 최종 확인용 1회.`;
+  $('#premium').addEventListener('change', renderAxes);
+  $('#run').addEventListener('click', runModel);
+  $('#reset').addEventListener('click', () => { defaultSel(); renderGroups(); renderAxes(); $('#premium').value = ST.settings.premium; $('#C').value = ST.settings.C; $('#momlag').value = ST.settings.mom_lag; $('#includeTest').checked = false; });
+  $('#tabs').addEventListener('click', e => { if (e.target.dataset.t) switchTab(e.target.dataset.t); });
+  $('#dlgClose').addEventListener('click', () => $('#dlg').close());
+}
+init().catch(e => { $('#sub').textContent = '서버 연결 실패: ' + e.message; });
+</script>
+</body>
+</html>
